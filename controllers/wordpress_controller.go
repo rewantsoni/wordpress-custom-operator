@@ -76,11 +76,6 @@ func (r *WordpressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return res, err
 	}
 
-	//res, err = createPV(r, ctx, log, req, wordpress)
-	//if err != nil {
-	//	return res, err
-	//}
-
 	res, err = createWordPress(r, ctx, log, req, wordpress)
 	if err != nil {
 		return res, err
@@ -90,13 +85,12 @@ func (r *WordpressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	if err != nil {
 		return res, err
 	}
-	// your logic here
 
 	return ctrl.Result{Requeue: true}, nil
 }
 
 func createMySQL(r *WordpressReconciler, ctx context.Context, log logr.Logger, req ctrl.Request, wordpress *wordpressv1.Wordpress) (ctrl.Result, error) {
-	res, err := createServiceMySQL(r, ctx, log, req, wordpress, "wordpress-mysql")
+	res, err := createMySQLService(r, ctx, log, req, wordpress, "wordpress-mysql")
 	if err != nil {
 		return res, err
 	}
@@ -106,7 +100,7 @@ func createMySQL(r *WordpressReconciler, ctx context.Context, log logr.Logger, r
 		return res, err
 	}
 
-	res, err = createDeploymentMySQL(r, ctx, log, req, wordpress, "wordpress-mysql")
+	res, err = createMySQLDeployment(r, ctx, log, req, wordpress, "wordpress-mysql")
 	if err != nil {
 		return res, err
 	}
@@ -117,7 +111,7 @@ func createMySQL(r *WordpressReconciler, ctx context.Context, log logr.Logger, r
 
 func createWordPress(r *WordpressReconciler, ctx context.Context, log logr.Logger, req ctrl.Request, wordpress *wordpressv1.Wordpress) (ctrl.Result, error) {
 
-	res, err := createService(r, ctx, log, req, wordpress, "wordpress")
+	res, err := createWordpressService(r, ctx, log, req, wordpress, "wordpress")
 	if err != nil {
 		return res, err
 	}
@@ -127,7 +121,7 @@ func createWordPress(r *WordpressReconciler, ctx context.Context, log logr.Logge
 		return res, err
 	}
 
-	res, err = createDeployment(r, ctx, log, req, wordpress, "wordpress")
+	res, err = createWordpressDeployment(r, ctx, log, req, wordpress, "wordpress")
 	if err != nil {
 		return res, err
 	}
@@ -182,14 +176,14 @@ func newPVC(wordpress *wordpressv1.Wordpress, name string) *v1.PersistentVolumeC
 	}
 }
 
-func createDeploymentMySQL(r *WordpressReconciler, ctx context.Context, log logr.Logger, req ctrl.Request, wordpress *wordpressv1.Wordpress, name string) (ctrl.Result, error) {
+func createMySQLDeployment(r *WordpressReconciler, ctx context.Context, log logr.Logger, req ctrl.Request, wordpress *wordpressv1.Wordpress, name string) (ctrl.Result, error) {
 	toFind := types.NamespacedName{
 		Name:      name,
 		Namespace: wordpress.Namespace,
 	}
 	err := r.Get(ctx, toFind, &appsv1.Deployment{})
 	if err != nil && errors.IsNotFound(err) {
-		deployment := newDeploymentMySQL(wordpress, name)
+		deployment := newMySQLDeployment(wordpress, name)
 
 		if err := controllerutil.SetControllerReference(wordpress, deployment, r.Scheme); err != nil {
 			return ctrl.Result{}, err
@@ -206,7 +200,7 @@ func createDeploymentMySQL(r *WordpressReconciler, ctx context.Context, log logr
 	return ctrl.Result{}, nil
 }
 
-func newDeploymentMySQL(wordpress *wordpressv1.Wordpress, name string) *appsv1.Deployment {
+func newMySQLDeployment(wordpress *wordpressv1.Wordpress, name string) *appsv1.Deployment {
 
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -288,14 +282,14 @@ func newDeploymentMySQL(wordpress *wordpressv1.Wordpress, name string) *appsv1.D
 	}
 }
 
-func createDeployment(r *WordpressReconciler, ctx context.Context, log logr.Logger, req ctrl.Request, wordpress *wordpressv1.Wordpress, name string) (ctrl.Result, error) {
+func createWordpressDeployment(r *WordpressReconciler, ctx context.Context, log logr.Logger, req ctrl.Request, wordpress *wordpressv1.Wordpress, name string) (ctrl.Result, error) {
 	toFind := types.NamespacedName{
 		Name:      name,
 		Namespace: wordpress.Namespace,
 	}
 	err := r.Get(ctx, toFind, &appsv1.Deployment{})
 	if err != nil && errors.IsNotFound(err) {
-		deployment := newDeployment(wordpress, name)
+		deployment := newWordpressDeployment(wordpress, name)
 
 		if err := controllerutil.SetControllerReference(wordpress, deployment, r.Scheme); err != nil {
 			return ctrl.Result{}, err
@@ -312,7 +306,7 @@ func createDeployment(r *WordpressReconciler, ctx context.Context, log logr.Logg
 	return ctrl.Result{}, nil
 }
 
-func newDeployment(wordpress *wordpressv1.Wordpress, name string) *appsv1.Deployment {
+func newWordpressDeployment(wordpress *wordpressv1.Wordpress, name string) *appsv1.Deployment {
 
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -391,14 +385,14 @@ func newDeployment(wordpress *wordpressv1.Wordpress, name string) *appsv1.Deploy
 	}
 }
 
-func createServiceMySQL(r *WordpressReconciler, ctx context.Context, log logr.Logger, req ctrl.Request, wordpress *wordpressv1.Wordpress, name string) (ctrl.Result, error) {
+func createMySQLService(r *WordpressReconciler, ctx context.Context, log logr.Logger, req ctrl.Request, wordpress *wordpressv1.Wordpress, name string) (ctrl.Result, error) {
 	toFind := types.NamespacedName{
 		Name:      "wordpress-mysql",
 		Namespace: wordpress.Namespace,
 	}
 	err := r.Get(ctx, toFind, &v1.Service{})
 	if err != nil && errors.IsNotFound(err) {
-		service := newServiceMySQL(wordpress)
+		service := newMySQLService(wordpress)
 		if err := controllerutil.SetControllerReference(wordpress, service, r.Scheme); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -414,7 +408,7 @@ func createServiceMySQL(r *WordpressReconciler, ctx context.Context, log logr.Lo
 	return ctrl.Result{}, nil
 }
 
-func newServiceMySQL(wordpress *wordpressv1.Wordpress) *v1.Service {
+func newMySQLService(wordpress *wordpressv1.Wordpress) *v1.Service {
 	return &v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "wordpress-mysql",
@@ -438,14 +432,14 @@ func newServiceMySQL(wordpress *wordpressv1.Wordpress) *v1.Service {
 	}
 }
 
-func createService(r *WordpressReconciler, ctx context.Context, log logr.Logger, req ctrl.Request, wordpress *wordpressv1.Wordpress, name string) (ctrl.Result, error) {
+func createWordpressService(r *WordpressReconciler, ctx context.Context, log logr.Logger, req ctrl.Request, wordpress *wordpressv1.Wordpress, name string) (ctrl.Result, error) {
 	toFind := types.NamespacedName{
 		Name:      name,
 		Namespace: wordpress.Namespace,
 	}
 	err := r.Get(ctx, toFind, &v1.Service{})
 	if err != nil && errors.IsNotFound(err) {
-		service := newService(wordpress, name)
+		service := newWordpressService(wordpress, name)
 		if err := controllerutil.SetControllerReference(wordpress, service, r.Scheme); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -461,7 +455,7 @@ func createService(r *WordpressReconciler, ctx context.Context, log logr.Logger,
 	return ctrl.Result{}, nil
 }
 
-func newService(wordpress *wordpressv1.Wordpress, name string) *v1.Service {
+func newWordpressService(wordpress *wordpressv1.Wordpress, name string) *v1.Service {
 	return &v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
