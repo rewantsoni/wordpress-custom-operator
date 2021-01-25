@@ -29,7 +29,7 @@ type WordpressSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Foo is an example field of Wordpress. Edit Wordpress_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	SqlRootPassword string `json:"sqlRootPassword,omitempty"`
 }
 
 // WordpressStatus defines the observed state of Wordpress
