@@ -398,7 +398,7 @@ func createServiceMySQL(r *WordpressReconciler, ctx context.Context, log logr.Lo
 	}
 	err := r.Get(ctx, toFind, &v1.Service{})
 	if err != nil && errors.IsNotFound(err) {
-		service := newServiceMySQL(wordpress, name)
+		service := newServiceMySQL(wordpress)
 		if err := controllerutil.SetControllerReference(wordpress, service, r.Scheme); err != nil {
 			return ctrl.Result{}, err
 		}
