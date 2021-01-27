@@ -5,9 +5,7 @@ import (
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -15,7 +13,7 @@ import (
 )
 
 func createMySQL(r *WordpressReconciler, ctx context.Context, log logr.Logger, req ctrl.Request, wordpress *wordpressv1.Wordpress) (ctrl.Result, error) {
-	res, err := createMySQLService(r, ctx, log, req, wordpress, "wordpress-mysql")
+	res, err := createMySQLService(r, ctx, log, req, wordpress)
 	if err != nil {
 		return res, err
 	}
@@ -25,7 +23,7 @@ func createMySQL(r *WordpressReconciler, ctx context.Context, log logr.Logger, r
 		return res, err
 	}
 
-	res, err = createMySQLDeployment(r, ctx, log, req, wordpress, "wordpress-mysql")
+	res, err = createMySQLDeployment(r, ctx, log, req, wordpress)
 	if err != nil {
 		return res, err
 	}
@@ -34,13 +32,8 @@ func createMySQL(r *WordpressReconciler, ctx context.Context, log logr.Logger, r
 
 }
 
-func createMySQLService(r *WordpressReconciler, ctx context.Context, log logr.Logger, req ctrl.Request, wordpress *wordpressv1.Wordpress, name string) (ctrl.Result, error) {
-	toFind := types.NamespacedName{
-		Name:      "wordpress-mysql",
-		Namespace: wordpress.Namespace,
-	}
-	err := r.Get(ctx, toFind, &v1.Service{})
-	if err != nil && errors.IsNotFound(err) {
+func createMySQLService(r *WordpressReconciler, ctx context.Context, log logr.Logger, req ctrl.Request, wordpress *wordpressv1.Wordpress) (ctrl.Result, error) {
+	if objectNotFound(r, ctx, "wordpress-mysql", &v1.Service{}, *wordpress) {
 		service := newMySQLService(wordpress)
 		if err := controllerutil.SetControllerReference(wordpress, service, r.Scheme); err != nil {
 			return ctrl.Result{}, err
@@ -48,10 +41,10 @@ func createMySQLService(r *WordpressReconciler, ctx context.Context, log logr.Lo
 
 		err := r.Create(ctx, service)
 		if err != nil {
-			log.Error(err, "Failed to create Service "+name, "service.name", service.Name)
+			log.Error(err, "Failed to create MySQL Service ", "service.name", service.Name)
 			return ctrl.Result{}, err
 		}
-		log.Info("Returned custom Service object "+name, "name", req.NamespacedName.Name)
+		log.Info("Returned custom MySQL Service object ", "name", req.NamespacedName.Name)
 		return ctrl.Result{Requeue: true}, nil
 	}
 	return ctrl.Result{}, nil
@@ -81,14 +74,9 @@ func newMySQLService(wordpress *wordpressv1.Wordpress) *v1.Service {
 	}
 }
 
-func createMySQLDeployment(r *WordpressReconciler, ctx context.Context, log logr.Logger, req ctrl.Request, wordpress *wordpressv1.Wordpress, name string) (ctrl.Result, error) {
-	toFind := types.NamespacedName{
-		Name:      name,
-		Namespace: wordpress.Namespace,
-	}
-	err := r.Get(ctx, toFind, &appsv1.Deployment{})
-	if err != nil && errors.IsNotFound(err) {
-		deployment := newMySQLDeployment(wordpress, name)
+func createMySQLDeployment(r *WordpressReconciler, ctx context.Context, log logr.Logger, req ctrl.Request, wordpress *wordpressv1.Wordpress) (ctrl.Result, error) {
+	if objectNotFound(r, ctx, "wordpress-mysql", &appsv1.Deployment{}, *wordpress) {
+		deployment := newMySQLDeployment(wordpress)
 
 		if err := controllerutil.SetControllerReference(wordpress, deployment, r.Scheme); err != nil {
 			return ctrl.Result{}, err
@@ -96,20 +84,20 @@ func createMySQLDeployment(r *WordpressReconciler, ctx context.Context, log logr
 
 		err := r.Create(ctx, deployment)
 		if err != nil {
-			log.Error(err, "Failed to create Deployment "+name, "deployment.name", deployment.Name)
+			log.Error(err, "Failed to create MySQL Deployment ", "deployment.name", deployment.Name)
 			return ctrl.Result{}, err
 		}
-		log.Info("Returned custom Deployment object "+name, "name", req.NamespacedName.Name)
+		log.Info("Returned custom MySQL Deployment object ", "name", req.NamespacedName.Name)
 		return ctrl.Result{Requeue: true}, nil
 	}
 	return ctrl.Result{}, nil
 }
 
-func newMySQLDeployment(wordpress *wordpressv1.Wordpress, name string) *appsv1.Deployment {
+func newMySQLDeployment(wordpress *wordpressv1.Wordpress) *appsv1.Deployment {
 
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name:      "wordpress-mysql",
 			Namespace: wordpress.Namespace,
 			Labels: map[string]string{
 				"app": "wordpress",

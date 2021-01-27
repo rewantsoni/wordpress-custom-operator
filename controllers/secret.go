@@ -4,21 +4,14 @@ import (
 	"context"
 	"github.com/go-logr/logr"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	wordpressv1 "wordpress-operator/api/v1"
 )
 
 func createSecret(r *WordpressReconciler, ctx context.Context, log logr.Logger, req ctrl.Request, wordpress *wordpressv1.Wordpress) (ctrl.Result, error) {
-	toFind := types.NamespacedName{
-		Name:      "mysql-pass",
-		Namespace: wordpress.Namespace,
-	}
-	err := r.Get(ctx, toFind, &v1.Secret{})
-	if err != nil && errors.IsNotFound(err) {
+	if objectNotFound(r, ctx, "mysql-pass", &v1.Secret{}, *wordpress) {
 
 		secret := newSecret(wordpress)
 
